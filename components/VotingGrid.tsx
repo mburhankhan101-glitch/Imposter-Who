@@ -43,10 +43,18 @@ export function VotingGrid({ state, selfId, onVote, onRevealNow }: VotingGridPro
                 onClick={() => onVote(p.id)}
                 className="flex flex-col items-center gap-1 group"
               >
-                <PlayerAvatar name={p.name} size="lg" ringColor={selected ? "accent" : "none"} />
-                <span className="text-sm font-medium truncate max-w-full">{p.name}</span>
+                <PlayerAvatar
+                  name={p.name}
+                  size="lg"
+                  ringColor={selected ? "accent" : "none"}
+                  dimmed={!p.connected}
+                />
+                <span className="text-sm font-medium truncate max-w-full">
+                  {p.name}
+                  {!p.connected && <span className="text-muted"> (offline)</span>}
+                </span>
                 <span className="text-xs text-muted">
-                  {votes > 0 ? `${votes} vote${votes === 1 ? "" : "s"}` : " "}
+                  {votes > 0 ? `${votes} vote${votes === 1 ? "" : "s"}` : " "}
                 </span>
               </button>
             );

@@ -21,6 +21,7 @@ export function HintRound({ state, selfId, onSubmitHint }: HintRoundProps) {
   );
   const isYourTurn = currentTurnId === selfId;
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? "Someone";
+  const isConnected = (id: string) => state.players.find((p) => p.id === id)?.connected ?? false;
 
   const handleSubmit = () => {
     const trimmed = text.trim();
@@ -43,16 +44,18 @@ export function HintRound({ state, selfId, onSubmitHint }: HintRoundProps) {
           {state.turnOrder.map((id) => {
             const submitted = state.hints.some((h) => h.playerId === id && h.round === state.round);
             const isTurn = id === currentTurnId;
+            const offline = !isConnected(id);
             return (
               <div key={id} className="flex flex-col items-center gap-1 w-16">
                 <PlayerAvatar
                   name={nameOf(id)}
                   size="sm"
-                  ringColor={isTurn ? "accent" : "none"}
-                  dimmed={submitted && !isTurn}
+                  ringColor={isTurn && !offline ? "accent" : "none"}
+                  dimmed={(submitted && !isTurn) || offline}
                 />
                 <span className="text-xs text-muted truncate w-full text-center">
                   {nameOf(id)}
+                  {offline ? " 💤" : ""}
                 </span>
               </div>
             );
@@ -78,6 +81,7 @@ export function HintRound({ state, selfId, onSubmitHint }: HintRoundProps) {
       ) : (
         <p className="text-center text-muted text-sm">
           Waiting for <span className="font-medium text-foreground">{nameOf(currentTurnId ?? "")}</span> to give a hint…
+          {currentTurnId && !isConnected(currentTurnId) && " (reconnecting — will auto-skip shortly)"}
         </p>
       )}
 
@@ -90,8 +94,12 @@ export function HintRound({ state, selfId, onSubmitHint }: HintRoundProps) {
               .reverse()
               .map((h, i) => (
                 <div key={i} className="flex items-baseline gap-2 text-sm">
-                  <span className="font-medium">{nameOf(h.playerId)}:</span>
-                  <span className="text-muted">&ldquo;{h.text}&rdquo;</span>
+                  <span className={`font-medium ${h.skipped ? "text-muted" : ""}`}>
+                    {nameOf(h.playerId)}:
+                  </span>
+                  <span className={h.skipped ? "text-muted italic" : "text-muted"}>
+                    {h.skipped ? h.text : `“${h.text}”`}
+                  </span>
                   <span className="text-xs text-muted ml-auto">R{h.round}</span>
                 </div>
               ))}

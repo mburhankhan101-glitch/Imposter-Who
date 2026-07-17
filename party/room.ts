@@ -10,6 +10,12 @@ import {
   ServerMessage,
 } from "./types";
 
+/** Safety cap on the auto-skip loop in `autoSkipDisconnectedTurns` — one
+ * hint round can advance the turn pointer at most `players.length` times,
+ * so this comfortably covers every round without allowing a runaway loop
+ * if a future bug ever made `currentTurnPlayerId` stop advancing. */
+const MAX_AUTO_SKIP_STEPS = 50;
+
 /** One instance of this class = one game room, keyed by the room code in
  * the URL (party/room.ts is wired to the "main" party in partykit.json).
  * State lives in memory for the room's lifetime — that's the whole point
@@ -38,9 +44,18 @@ export default class Room implements Party.Server {
   // ---- connection lifecycle ----
 
   onConnect(conn: Party.Connection) {
-    // The client sends a "join" message right after connecting with their
-    // chosen name; until then we just make sure they get the current state.
-    this.sendTo(conn, this.state);
+    // If this id already belongs to a player (page refresh / network blip —
+    // the client passes a persisted id, so PartyKit hands us the same
+    // conn.id back), mark them connected again without waiting for a fresh
+    // "join" message. This is what lets someone rejoin mid-game and keep
+    // their seat, word, and turn-order position.
+    const existing = this.state.players.find((p) => p.id === conn.id);
+    if (existing) {
+      existing.connected = true;
+      this.broadcast();
+    } else {
+      this.sendTo(conn, this.state);
+    }
   }
 
   onClose(conn: Party.Connection) {
@@ -50,14 +65,15 @@ export default class Room implements Party.Server {
     if (this.state.phase === "lobby") {
       // Safe to fully remove pre-game — nothing references their id yet.
       this.state.players = this.state.players.filter((p) => p.id !== conn.id);
-      if (this.state.hostId === conn.id) {
-        this.state.hostId = this.state.players[0]?.id ?? null;
-        if (this.state.hostId) this.setHost(this.state.hostId);
-      }
+      this.reassignHostIfNeeded();
     } else {
       // Mid-game: keep them in turnOrder/hints/votes so the round isn't
       // corrupted by a refresh — just mark disconnected.
       player.connected = false;
+      this.reassignHostIfNeeded();
+      if (this.state.phase === "hints") {
+        this.autoSkipDisconnectedTurns();
+      }
     }
     this.broadcast();
   }
@@ -102,7 +118,10 @@ export default class Room implements Party.Server {
       existing.connected = true;
     } else {
       if (this.state.phase !== "lobby") {
-        return this.sendError(sender, "Game already in progress — wait for the next round.");
+        return this.sendError(
+          sender,
+          "A game is already in progress — you'll be able to join once it starts a new round.",
+        );
       }
       const isFirstPlayer = this.state.players.length === 0;
       const player: Player = {
@@ -152,6 +171,9 @@ export default class Room implements Party.Server {
     if (sender.id !== this.state.hostId) return;
     if (this.state.phase !== "reveal-word") return;
     this.state.phase = "hints";
+    // In case whoever's first in turn order disconnected between the word
+    // reveal and now (e.g. they closed the tab right after seeing it).
+    this.autoSkipDisconnectedTurns();
     this.broadcast();
   }
 
@@ -167,16 +189,8 @@ export default class Room implements Party.Server {
     }
 
     this.state.hints.push({ playerId: sender.id, round: this.state.round, text });
-
-    const stillWaiting = this.currentTurnPlayerId();
-    if (stillWaiting === null) {
-      // Everyone in turnOrder has submitted a hint for this round.
-      if (this.state.round < HINT_ROUNDS) {
-        this.state.round += 1;
-      } else {
-        this.state.phase = "voting";
-      }
-    }
+    this.advanceRoundIfComplete();
+    this.autoSkipDisconnectedTurns();
     this.broadcast();
   }
 
@@ -233,7 +247,55 @@ export default class Room implements Party.Server {
     return null;
   }
 
-  private setHost(id: string) {
+  /** If everyone in turnOrder has a hint for the current round, advances to
+   * the next round or into voting once round 3 is done. */
+  private advanceRoundIfComplete() {
+    if (this.currentTurnPlayerId() !== null) return;
+    if (this.state.round < HINT_ROUNDS) {
+      this.state.round += 1;
+    } else {
+      this.state.phase = "voting";
+    }
+  }
+
+  /** Auto-fills a placeholder hint for any disconnected player whenever
+   * it's their turn, so one dropped connection doesn't stall the whole
+   * game waiting for a hint that's never coming. Stops as soon as it's a
+   * connected player's turn (or the round/game has moved past hints). */
+  private autoSkipDisconnectedTurns() {
+    for (let i = 0; i < MAX_AUTO_SKIP_STEPS; i++) {
+      if (this.state.phase !== "hints") return;
+      const turnId = this.currentTurnPlayerId();
+      if (turnId === null) {
+        this.advanceRoundIfComplete();
+        continue;
+      }
+      const player = this.state.players.find((p) => p.id === turnId);
+      if (!player || player.connected) return; // real player's turn — wait for them
+
+      this.state.hints.push({
+        playerId: turnId,
+        round: this.state.round,
+        text: "(offline — turn skipped)",
+        skipped: true,
+      });
+      this.advanceRoundIfComplete();
+    }
+  }
+
+  /** Promotes another connected player to host if the current host is
+   * missing or disconnected — otherwise host-gated actions (start, begin
+   * hints, reveal, play again) would strand the whole room. */
+  private reassignHostIfNeeded() {
+    const currentHost = this.state.players.find((p) => p.id === this.state.hostId);
+    if (currentHost?.connected) return;
+
+    const nextHost = this.state.players.find((p) => p.connected);
+    this.state.hostId = nextHost?.id ?? null;
+    this.setHost(this.state.hostId);
+  }
+
+  private setHost(id: string | null) {
     this.state.players = this.state.players.map((p) => ({ ...p, isHost: p.id === id }));
   }
 

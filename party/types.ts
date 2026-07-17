@@ -20,6 +20,10 @@ export interface Hint {
   playerId: string;
   round: number; // 1, 2, or 3
   text: string;
+  /** True when the server auto-filled this because the player was
+   * disconnected on their turn — lets the UI show it was skipped, not a
+   * real hint. */
+  skipped?: boolean;
 }
 
 export interface RoomState {
