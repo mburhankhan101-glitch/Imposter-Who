@@ -7,25 +7,32 @@ actually know it.
 ## Stack
 
 - **Next.js (App Router)** — client UI (`app/`, `components/`)
-- **PartyKit** — the room server (`party/room.ts`). Each room is a single
-  stateful server instance keyed by room code — no database needed, state
-  lives in memory for the life of the room.
-- **partysocket** — client library that connects to the PartyKit room.
+- **Standalone room server** (`server/index.ts`) — a plain `ws`/Node server
+  that runs the exact same game logic as `party/room.ts` (originally written
+  for PartyKit, reused unmodified). Each room is a single in-memory state
+  machine keyed by room code — no database needed. Deployed to Fly.io.
+  > This project originally targeted PartyKit's shared hosting, but that
+  > shared `partykit.dev` zone hit Cloudflare's org-wide 10,000-custom-domain
+  > cap and stopped accepting new deploys — see `server/index.ts` for the
+  > adapter that lets `party/room.ts` run standalone instead.
+- **partysocket** — client library that connects to the room server. It's a
+  generic reconnecting-WebSocket client (not Cloudflare-specific), so it
+  works unchanged against `server/index.ts`.
 
 ## Running locally
 
-You need **two processes**: the Next.js app and the PartyKit room server.
+You need **two processes**: the Next.js app and the room server.
 
 ```bash
 npm install
-npm run dev:all   # runs both `next dev` and `partykit dev` together
+npm run dev:all   # runs both `next dev` and the room server together
 ```
 
 Or run them separately in two terminals:
 
 ```bash
-npm run dev        # Next.js on http://localhost:3000
-npm run party:dev   # PartyKit room server on http://localhost:1999
+npm run dev          # Next.js on http://localhost:3000
+npm run server:dev   # room server on http://localhost:1999
 ```
 
 Open http://localhost:3000, open it again in a couple more tabs (or on your
@@ -34,11 +41,13 @@ you need **3+ players** before the host can start.
 
 ## Deploying
 
-1. Deploy the room server: `npm run party:deploy` (requires a free PartyKit
-   account — `npx partykit login` first). This prints a host like
-   `imposter-who.yourusername.partykit.dev`.
-2. Set `NEXT_PUBLIC_PARTYKIT_HOST` to that host (see `.env.local.example`)
-   in your Vercel project's environment variables.
+1. Deploy the room server to Fly.io (needs a free Fly.io account —
+   `fly auth login` first, then `fly launch` once to create the app from
+   `fly.toml`, and `fly deploy` for subsequent deploys). This gives you a
+   host like `imposter-who-server.fly.dev`.
+2. Set `NEXT_PUBLIC_PARTYKIT_HOST` to that host, e.g.
+   `imposter-who-server.fly.dev` (see `.env.local.example`) in your Vercel
+   project's environment variables.
 3. Deploy the Next.js app to Vercel as usual.
 
 ## Game flow

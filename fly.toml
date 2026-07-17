@@ -1,0 +1,19 @@
+# Fly.io config for the standalone room server (server/index.ts).
+# Deploy with: fly launch (first time, picks an app name) then fly deploy.
+# This does NOT deploy the Next.js app — that goes to Vercel separately.
+
+app = "imposter-who-server"
+primary_region = "iad"
+
+[build]
+
+[http_service]
+  internal_port = 1999
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
