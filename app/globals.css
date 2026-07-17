@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf7f2;
+  --foreground: #241f1c;
+  --muted: #6b655f;
+  --card: #ffffff;
+  --border: #e7e2da;
+
+  /* Single accent for primary actions — teal, friendly and not corporate. */
+  --accent: #0e7c7b;
+  --accent-hover: #0b6362;
+  --accent-foreground: #ffffff;
+  --accent-soft: #e3f1f0;
+
+  /* Reserved ONLY for the imposter reveal moment and destructive actions,
+     so it carries real weight instead of showing up everywhere. */
+  --danger: #dc2626;
+  --danger-soft: #fbe9e9;
+
+  --success: #1a8a4a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1c1a17;
+    --foreground: #f2ede6;
+    --muted: #a89f95;
+    --card: #262320;
+    --border: #3a352f;
+    --accent: #2bb3ac;
+    --accent-hover: #3fc7c0;
+    --accent-foreground: #0d1f1e;
+    --accent-soft: #1c3130;
+    --danger: #ef4444;
+    --danger-soft: #3a1f1f;
+    --success: #34d17a;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
