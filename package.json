@@ -9,7 +9,9 @@
     "dev:all": "concurrently -n next,server -c blue,magenta \"npm:dev\" \"npm:server:dev\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy"
   },
   "dependencies": {
     "next": "16.2.10",
@@ -30,6 +32,7 @@
     "eslint-config-next": "16.2.10",
     "partykit": "^0.0.115",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.20.0"
   }
 }

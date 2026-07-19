@@ -1,0 +1,23 @@
+# Cloudflare Workers config for the Imposter-Who room server (worker/index.ts).
+#
+# Deploy (free plan, no credit card):
+#   npx wrangler login      # opens a browser to sign in / create a free account
+#   npx wrangler deploy     # first run asks you to pick a *.workers.dev subdomain
+#
+# You'll get a URL like https://imposter-who-server.<your-subdomain>.workers.dev
+# Put that HOST (no https://) into NEXT_PUBLIC_PARTYKIT_HOST on Vercel, then
+# redeploy the Vercel app.
+name = "imposter-who-server"
+main = "worker/index.ts"
+compatibility_date = "2024-11-01"
+
+# The room server is a Durable Object, one instance per room code.
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "RoomDO"
+
+# `new_sqlite_classes` uses the SQLite storage backend, which is what makes
+# Durable Objects available on the FREE Workers plan (no card required).
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO"]
