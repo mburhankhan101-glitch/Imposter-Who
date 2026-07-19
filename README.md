@@ -41,14 +41,22 @@ you need **3+ players** before the host can start.
 
 ## Deploying
 
-1. Deploy the room server to Fly.io (needs a free Fly.io account —
-   `fly auth login` first, then `fly launch` once to create the app from
-   `fly.toml`, and `fly deploy` for subsequent deploys). This gives you a
-   host like `imposter-who-server.fly.dev`.
-2. Set `NEXT_PUBLIC_PARTYKIT_HOST` to that host, e.g.
-   `imposter-who-server.fly.dev` (see `.env.local.example`) in your Vercel
-   project's environment variables.
-3. Deploy the Next.js app to Vercel as usual.
+The Next.js app goes on Vercel; the realtime room server (`server/index.ts`)
+needs a host that supports WebSockets. **Render.com's free tier** works with
+no credit card:
+
+1. Push this repo to GitHub (it includes `render.yaml`).
+2. On [render.com](https://render.com) (sign in with GitHub, no card): **New →
+   Blueprint → pick this repo → Apply**. Render reads `render.yaml` and deploys
+   the room server, giving you a host like `imposter-who-server.onrender.com`.
+3. In your Vercel project → **Settings → Environment Variables**, set
+   `NEXT_PUBLIC_PARTYKIT_HOST` to that host (just the host, no `https://`), then
+   **redeploy** the Vercel app.
+
+> Render's free tier sleeps after ~15 min idle, so the first person to join a
+> room after a quiet spell waits ~50s while it wakes, then it's instant. For an
+> always-on free server, deploy the room server to Cloudflare Workers +
+> Durable Objects instead (a bigger change — ask if you want it).
 
 ## Game flow
 
