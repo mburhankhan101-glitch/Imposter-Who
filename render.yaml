@@ -1,0 +1,17 @@
+# Render.com Blueprint for the Imposter-Who room server (server/index.ts).
+# Deploy: render.com -> New -> Blueprint -> pick this repo -> Apply.
+# Free tier, WebSocket support, no credit card required.
+#
+# This hosts ONLY the realtime room server. The Next.js app stays on Vercel;
+# point its NEXT_PUBLIC_PARTYKIT_HOST env var at this service's .onrender.com
+# host (no https://), then redeploy Vercel.
+services:
+  - type: web
+    name: imposter-who-server
+    runtime: node
+    plan: free
+    # Render injects PORT; server/index.ts reads process.env.PORT.
+    buildCommand: npm install
+    startCommand: npm run server:start
+    healthCheckPath: /
+    autoDeploy: true
