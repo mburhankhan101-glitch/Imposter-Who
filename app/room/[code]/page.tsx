@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRoom } from "@/hooks/useRoom";
 import { normalizeRoomCode } from "@/lib/roomCode";
+import { ConnectingStatus } from "@/components/ConnectingStatus";
 import { NameEntry } from "@/components/NameEntry";
 import { Card } from "@/components/ui/Card";
 import { Lobby } from "@/components/Lobby";
@@ -73,7 +74,7 @@ function RoomPageInner() {
       )}
 
       {!state ? (
-        <p className="text-muted">Connecting…</p>
+        <ConnectingStatus className="text-muted" />
       ) : gameInProgress ? (
         <Card className="w-full max-w-sm text-center">
           <p className="text-lg font-semibold mb-2">A game is already in progress</p>

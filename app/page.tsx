@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { generateRoomCode, normalizeRoomCode } from "@/lib/roomCode";
+import { prewarmRoom } from "@/lib/prewarm";
 
 export default function Home() {
   const router = useRouter();
@@ -13,6 +14,9 @@ export default function Home() {
   const [mode, setMode] = useState<"create" | "join">("create");
 
   const goToRoom = (code: string) => {
+    // Spin up the room's server now, so it's warm by the time the room page's
+    // real connection opens a moment later.
+    prewarmRoom(code);
     router.push(`/room/${code}?name=${encodeURIComponent(name.trim())}`);
   };
 
